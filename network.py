@@ -1,8 +1,15 @@
 from Router import Router
 import sys
 import random
+from matrix_utils import *
 
-def initNetwork(numRouters: int):
+def sendRandomPacket(routers: list[Router]):
+    print("\nAttempt to send packet")
+    fromRouter = routers[random.randint(1, len(routers) - 1)]
+    toRouter = routers[random.randint(1, len(routers) - 1)]
+    fromRouter.send_packet(fromRouter.create_packet(toRouter, "test_payload"))
+
+def createNetwork(numRouters: int):
 
     #> creating a network of routers
 
@@ -19,7 +26,9 @@ def initNetwork(numRouters: int):
         routers[i-1].add_neighbor(routers[i], cost)
 
     # linking routers randomly
-    for _ in range(random.randint(numRouters // 2, numRouters * 2)):
+    minExtraConnections = numRouters // 2
+    maxExtraConnections = max(int(numRouters * (numRouters - 1) / 2), minExtraConnections)
+    for _ in range(random.randint(minExtraConnections, maxExtraConnections)):
         routerA: Router = routers[random.randint(0, numRouters - 1)]
         routerB: Router = routers[random.randint(0, numRouters - 1)]
         if routerA != routerB:
@@ -28,21 +37,36 @@ def initNetwork(numRouters: int):
             routerB.add_neighbor(routerA, cost)
     #< linking routers
 
-    # flooding routers
-    routers[0].flood(routers[0].create_lsa())
-    
+    # printing adjacency matrix
+    print("Current matrix:")
+    print_adjacency_matrix(routers, create_adjacency_matrix(routers))
+
+    sendRandomPacket(routers)
+
+    removedRouter = routers.pop(random.randint(1, len(routers) - 1))
+    removedRouter.disconnect()
+    removedRouter2 = routers.pop(random.randint(1, len(routers) - 1))
+    removedRouter2.disconnect()
+    removedRouter3 = routers.pop(random.randint(1, len(routers) - 1))
+    removedRouter3.disconnect()
+    print(f"\nRemoving router {removedRouter}, {removedRouter2}, {removedRouter3}. New matrix:")
+    print_adjacency_matrix(routers, create_adjacency_matrix(routers))
+
+    sendRandomPacket(routers)
+    sendRandomPacket(routers)
+    sendRandomPacket(routers)
+    sendRandomPacket(routers)
     #< creating a network of routers
 
 if __name__ == "__main__":
     args = sys.argv[1:]
+
+    numRouters = 0
     try:
-        numRouters = args[0] and int(args[0]) or 2
-        if numRouters < 2:
-            print("Number of routers must be >= 2")
-        else:
-            initNetwork(numRouters)
+        numRouters = len(args) > 0 and int(args[0]) or 2
     except:
         print("Invalid Arguments")
-        pass
+    
+    createNetwork(numRouters)
     
     
