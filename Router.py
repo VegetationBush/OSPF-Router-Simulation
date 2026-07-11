@@ -35,6 +35,9 @@ class Router:
         self.neighbors: dict[Router, int] = {} # [neighbor, cost]
         self.database: dict[Router, LSA] = {} # [router, lsa]
 
+    def is_neighbor(self: "Router", other: "Router"):
+        return other in self.neighbors
+    
     def build_dijkstra(self: "Router"):
         # Distance from this router to every other router
         distance = {router: float("inf") for router in self.database}
@@ -120,6 +123,8 @@ class Router:
     def remove_neighbor(self: "Router", router: "Router"):
         del self.neighbors[router]
         self.flood(self.create_lsa(), self)
+    def get_neighbors(self: "Router") -> list["Router"]:
+        return list(self.neighbors.keys())
 
     def flood(self: "Router", lsa: LSA, sender = None):
         router = lsa["router"]
