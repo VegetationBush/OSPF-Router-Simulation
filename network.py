@@ -1,10 +1,11 @@
-from Router import Router
+from Router import Router, packet
 import sys
 import random
 from matrix_utils import *
+import time
 
 class Network:
-    def __init__(self: Network, initialRouters: int, averageLinksPerNode: int = 4, connectionRadius: int = 3):
+    def __init__(self: "Network", initialRouters: int, averageLinksPerNode: int = 4, connectionRadius: int = 3):
         """
         Initializes a network with a specified number of routers.
 
@@ -24,6 +25,8 @@ class Network:
                 connectionRadius = -1 means that any router can connect with any
                 other router
         """
+
+        print(f"New network created with {initialRouters} routers, {averageLinksPerNode} average links, and a connection radius of {connectionRadius == -1 and "inf" or connectionRadius}")
 
         self.routers: list[Router] = []
         self.routerById: dict[int, Router] = {}
@@ -55,12 +58,12 @@ class Network:
                     routerB.add_neighbor(routerA, cost)
         #< linking routers
     
-    def print_network_topology(self: Network):
+    def print_network_topology(self: "Network"):
         print("Network matrix:")
         print_adjacency_matrix(self.routers, create_adjacency_matrix(self.routers))
         print()
 
-    def add_router(self: Network):
+    def add_router(self: "Network"):
         newRouter = Router()
         self.routerById[newRouter.id] = newRouter
         randRouterPosition = random.randint(0, len(self.routers) - 1)
@@ -79,27 +82,30 @@ class Network:
                 print(f"Neighboring link {newRouter} <-> {otherRouter}")
         print() 
         
-    def send_packet(self: Network, fromRouter: int, toRouter: int, payload: str = "sample_payload"):
-        if fromRouter not in self.routerById or toRouter not in self.routerById:
+    def send_packet(self: "Network", fromRouterId: int, toRouterId: int, payload: str = "sample_payload") -> packet:
+        if fromRouterId not in self.routerById or toRouterId not in self.routerById:
             print("One or both the routers do not exist!\n")
             return
 
-        # sends a packet from between routers
+        fromRouter = self.routerById[fromRouterId]
+        toRouter = self.routerById[toRouterId]
+        newPacket = fromRouter.create_packet(toRouter, payload)
+
         print("Attempt to send packet")
-        fromRouter = self.routers[random.randint(1, len(self.routers) - 1)]
-        toRouter = self.routers[random.randint(1, len(self.routers) - 1)]
-        fromRouter.send_packet(fromRouter.create_packet(toRouter, payload))
+        fromRouter.send_packet(newPacket)
         print()
 
-    def send_random_packet(self: Network):
+        return newPacket
+
+    def send_random_packet(self: "Network") -> packet:
         # sends a random packet from a router to another router
-        self.send_packet(
+        return self.send_packet(
             self.routers[random.randint(0, len(self.routers) - 1)].id,
             self.routers[random.randint(0, len(self.routers) - 1)].id,
             "random_packet"
         )
 
-    def disconnect_random_router(self: Network):
+    def disconnect_random_router(self: "Network"):
         # simulates a random router disconnecting from the network
         chosenRounter = self.routers[random.randint(0, len(self.routers) - 1)]
 
@@ -112,7 +118,7 @@ class Network:
         del self.routerById[chosenRounter.id]
         chosenRounter.disconnect()
         
-    def disconnect_random_link(self: Network):
+    def disconnect_random_link(self: "Network"):
         # simulates a link being disconnected between two routers
         selectedRouter = self.routers[random.randint(0, len(self.routers) - 1)]
         routerNeighbors = selectedRouter.get_neighbors()
@@ -129,23 +135,54 @@ if __name__ == "__main__":
     args = sys.argv[1:]
 
     initialRouters = 0
+    averageLinksPerNode = None
+    connectionRadius = None
+
     try:
         initialRouters = len(args) > 0 and int(args[0]) or 2
+        averageLinksPerNode = len(args) > 1 and int(args[1]) or 4
+        connectionRadius = len(args) > 2 and int(args[2]) or 3
     except:
         print("Invalid Arguments")
     
-    newNetwork = Network(initialRouters)
+    newNetwork = Network(initialRouters, averageLinksPerNode, connectionRadius)
+
+    print("\nAt this point, routers haven't built their hop tables yet. Let's try sending packets:\n")
+    newNetwork.send_random_packet()
+    newNetwork.send_random_packet()
+
+    print("Waiting for network to build routing table")
+    time.sleep(0.1) # waiting for network to build jump tables
     newNetwork.print_network_topology()
+
+    newNetwork.send_random_packet()
+    newNetwork.send_random_packet()
+
     newNetwork.add_router()
+    print("Waiting for network to build routing table")
+    time.sleep(0.1) # waiting for network to build jump tables
     newNetwork.print_network_topology()
+
+    newNetwork.send_random_packet()
+    newNetwork.send_random_packet()
+
     newNetwork.disconnect_random_router()
+    print("Waiting for network to build routing table")
+    time.sleep(0.1) # waiting for network to build jump tables
+
+    newNetwork.send_random_packet()
+    newNetwork.send_random_packet()
+
     newNetwork.print_network_topology()
     newNetwork.disconnect_random_link()
     newNetwork.disconnect_random_link()
     newNetwork.disconnect_random_link()
-    newNetwork.disconnect_random_link()
-    newNetwork.disconnect_random_link()
-    newNetwork.disconnect_random_link()
+    print("Waiting for network to build routing table")
+    time.sleep(0.1) # waiting for network to build jump tables
+
     newNetwork.print_network_topology()
     newNetwork.send_random_packet()
     newNetwork.send_random_packet()
+
+    print(f"Here's an example of the internal routing table of router {newNetwork.routers[0]}")
+    print(newNetwork.routers[0].next_hop)

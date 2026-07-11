@@ -1,4 +1,27 @@
 from typing import TypedDict
+import threading
+
+def queue_once(delay):
+    def decorator(func):
+        timer_name = f"_timer_{func.__name__}"
+
+        def wrapper(self, *args, **kwargs):
+            timer = getattr(self, timer_name, None)
+
+            if timer is not None and timer.is_alive():
+                return
+
+            def run():
+                setattr(self, timer_name, None)
+                func(self, *args, **kwargs)
+
+            timer = threading.Timer(delay, run)
+            setattr(self, timer_name, timer)
+            timer.start()
+
+        return wrapper
+
+    return decorator
 
 currentRouterId = 0
 
@@ -14,6 +37,7 @@ class packet(TypedDict):
     payload: str
     accumulated_cost: int
     accumulated_hops: int
+    reached_dest: bool
     
 def print_formatted_packet(packet: packet):
     print(
@@ -38,6 +62,7 @@ class Router:
     def is_neighbor(self: "Router", other: "Router"):
         return other in self.neighbors
     
+    @queue_once(0.05) # queue the build so it doesn't run too early
     def build_dijkstra(self: "Router"):
         # Distance from this router to every other router
         distance = {router: float("inf") for router in self.database}
@@ -147,6 +172,7 @@ class Router:
             "payload": payload,
             "accumulated_cost": 0,
             "accumulated_hops": 0,
+            "reached_dest": False
         }
     def send_packet(self: "Router", packet: packet):
         if packet["dest"] == self:
@@ -160,9 +186,11 @@ class Router:
         packet["accumulated_hops"] += 1
         packet["accumulated_cost"] += self.neighbors[nextHopRouter]
         nextHopRouter.receive_packet(packet)
+
     def receive_packet(self: "Router", packet: packet):
         if packet["dest"] == self:
             packet["path"].append(self)
+            packet["reached_dest"] = True
             print_formatted_packet(packet)
         else:
             self.send_packet(packet)
@@ -174,7 +202,6 @@ class Router:
 
         for neighbor in temp:
             neighbor.remove_neighbor(self)
-
 
     def __eq__(self: "Router", other):
         otherId = -1

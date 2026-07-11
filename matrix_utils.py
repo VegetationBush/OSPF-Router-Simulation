@@ -24,7 +24,7 @@ def create_adjacency_matrix(nodes: list["Router"]):
     return matrix
 
 def print_adjacency_matrix(nodes: list["Router"], matrix):
-    cell_width = 2
+    cell_width = 3
 
     def print_separator():
         print("+" + "+".join(["-" * (cell_width + 2)] * (len(nodes) + 1)) + "+")
