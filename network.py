@@ -139,7 +139,7 @@ if __name__ == "__main__":
     connectionRadius = None
 
     try:
-        initialRouters = len(args) > 0 and int(args[0]) or 2
+        initialRouters = len(args) > 0 and int(args[0]) or 10
         averageLinksPerNode = len(args) > 1 and int(args[1]) or 4
         connectionRadius = len(args) > 2 and int(args[2]) or 3
     except:
